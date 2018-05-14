@@ -78,7 +78,7 @@ AA = {
     "histidine (+)":                'HIP',
     "histidine (hd)":               'HID',
     "histidine (he)":               'HIE',
-    "isoleucine":                   'ISO',
+    "isoleucine":                   'ILE',
     "leucine":                      'LEU',
     "lysine":                       'LYS',
     "lysine (nh2)":                 'LYN',
