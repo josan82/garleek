@@ -11,6 +11,7 @@ Garleek - Gaussian bridge
 from __future__ import print_function, absolute_import, division
 from collections import OrderedDict
 import re
+import sys
 import numpy as np
 from .. import __version__
 from ..atom_types import ELEMENTS
@@ -30,7 +31,7 @@ class GaussianPatcher(object):
         self.forcefield = forcefield
         self.version = version
         self.basis_patch = None
-    
+
     def _is_route(self, line):
         return line.startswith('#')
 
@@ -46,7 +47,7 @@ class GaussianPatcher(object):
         if self.forcefield:
             command += " --ff '{}'".format(self.forcefield)
         return line.replace(matches.group(2), 'external="{}"{}'.format(command, gen))
-    
+
     def _patch_opt_keyword(self, line):
         searches = re.search(r'#.*((opt\w*)=?\(?([^\s\)]+)?\)?).*', line, re.IGNORECASE)
         if not searches:
@@ -89,6 +90,8 @@ class GaussianPatcher(object):
         # Atom types are always uppercased!
         atom_type = self.atom_types.get(atom_fields[1].upper())
         if atom_type is None:
+            if pdbinfo:
+                raise KeyError(atom_fields[1].upper())
             anumber = ELEMENTS.get(atom_fields[0].title(), atom_fields[0])
             print('Warning: Atom type', atom_fields[1], 'not found, using element', atom_fields[0].title(),
                   'with atomic number', anumber, 'as fallback')
@@ -105,11 +108,12 @@ class GaussianPatcher(object):
             patched_link_atom = '-'.join(link_atom_fields)
             line = line.replace(link_atom, patched_link_atom, 1)
         return line
-    
+
     def patch(self):
         skipped_mult_charges = False
         blocks = [['! Created with Garleek v{}\n'.format(__version__)]]
         basis_index = []
+        errors = []
         with open(self.filename) as f:
             for line in f:
                 orig_line, line = line, line.strip()
@@ -125,13 +129,15 @@ class GaussianPatcher(object):
                         try:
                             orig_line = self._patch_atom_type(orig_line)
                         except Exception as e:
-                            raise type(e)('{} at line `{}`'.format(e, orig_line))
+                            errors.append('{}: {} at line `{}`'.format(e.__class__.__name__, e, orig_line.rstrip()))
                     else:
                         skipped_mult_charges = True
                 elif len(blocks) > 3 and line.strip() == '****' and len(blocks)-1 not in basis_index:
                     basis_index.append(len(blocks) - 1)
                 blocks[-1].append(orig_line)
-        
+        if errors:
+            print('! One or more errors were found. Patching will continue, but the calculation will probably fail')
+            print(*errors, sep='\n')
         # patch basis set now
         if len(basis_index) == 1:
             idx = basis_index[0]
@@ -143,11 +149,11 @@ class GaussianPatcher(object):
                 print('Patching basis sets for MM...')
                 blocks.insert(idx, blocks[idx])
                 blocks.insert(idx+3, blocks[idx+1])
-    
+
         return ''.join([l for b in blocks for l in b])
 
 
-def patch_gaussian_input(*a, **kw):      
+def patch_gaussian_input(*a, **kw):
     patcher = GaussianPatcher(*a, **kw)
     return patcher.patch()
 
