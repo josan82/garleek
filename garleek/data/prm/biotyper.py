@@ -2,7 +2,6 @@ import re
 import os
 import sys
 
-atom_rx = r'^atom\s+([0-9]+)\s+([0-9]+)\s+(\w+)\s+"(.*)"\s+([0-9]+)\s+([0-9.]+)\s+([0-9]+)$'
 
 AA = {
     'alanine':              'ALA',
@@ -148,30 +147,32 @@ ALIASES = {
     'HN': ('H'),
     'OXT': ('O'),
 }
-# default assignments
-d = { 
-    'H1': '12', # link atom
-    '1':  '12',
-    'HC': '14',
-}
-with open(sys.argv[1]) as f:
-    for line in f:
-        search = re.search(atom_rx, line)
-        if search:
-            tinker_atom_type_id, aclass, amber_type, descr, symbol, mass, valence = search.groups()
-            residue_str = ' '.join(descr.split()[:-1]).lower()
-            amber_pdbname = descr.split()[-1]
-            if residue_str in AA:
-                restype = AA[residue_str].upper()
-                if restype:
-                    d[restype + '_' + amber_pdbname] = tinker_atom_type_id, amber_type
-                    for alias in ALIASES.get(amber_pdbname, ''):
-                        d[restype + '_' + alias] = tinker_atom_type_id, amber_type
 
+def main(prm_file):
+    biotype_rx = r'^biotype\s+\d+\s+(\S+)\s+"(.*)"\s+(\d+)'
+    # default assignments
+    d = {
+        'H1': '12',  # link atom
+        '1':  '12',
+        'HC': '14',
+    }
+    with open(prm_file) as f:
+        for line in f:
+            search = re.search(biotype_rx, line)
+            if search:
+                atom_type, residue_str, tinker_type = search.groups()
+                if residue_str in AA:
+                    restype = AA[residue_str.lower()].upper()
+                    if restype:
+                        d[restype + '_' + atom_type] = tinker_type
+                        for alias in ALIASES.get(atom_type, ''):
+                            d[restype + '_' + alias] = tinker_type
+    return d
 
-try:
-    output = sys.argv[2]
-except IndexError:
-    output = 'atom.types'
-with open(output, 'w') as f:
-    f.write('\n'.join('{} {} # amber type: {}'.format(k, v[0], v[1]) for (k,v) in sorted(d.items())))
+if __name__ == '__main__':
+    try:
+        d = main(sys.argv[1])
+    except IndexError:
+        sys.exit('Usage: biotyper.py forcefield.prm output.types')
+    else:
+        print('\n'.join('{} {}'.format(k, v) for (k,v) in sorted(d.items())))
