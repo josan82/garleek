@@ -163,7 +163,7 @@ ALIASES = {
 }
 
 def main(prm_file):
-    biotype_rx = r'^biotype\s+\d+\s+(\S+)\s+"(.*)"\s+(\d+)'
+    biotype_rx = r'^biotype\s+\d+\s+(\S+)\s+"(.*)"\s+([\-\d]+)'
     d = {
     }
     with open(prm_file) as f:
