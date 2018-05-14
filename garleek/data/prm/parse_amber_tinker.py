@@ -122,9 +122,31 @@ AA = {
     "cl-":                  'CL',
 }
 ALIASES = {
-    'CT': ('CX', 'CA'),
-    'H1': ('HP', 'HC', 'HA'),
-    'O2': ('O',),
+    'OE': ('OE1', 'OE2'),
+    'OD': ('OD1', 'OD2'),
+    'NH': ('NH1', 'NH2'),
+    'NE': ('NE2',),
+    'ND': ('ND1',),
+    'HA': ('HA1', 'HA2', 'HA3'),
+    'HB': ('HB1', 'HB2', 'HB3'),
+    'HC': ('HC1', 'HC2', 'HC3'),
+    'HD': ('HD1', 'HD2', 'HD3'),
+    'HD1': ('HD11', 'HD12', 'HD13'),
+    'HD2': ('HD21', 'HD22', 'HD23'),
+    'HE': ('HE1', 'HE2', 'HE3'),
+    'HE1': ('HE11', 'HE12'),
+    'HE2': ('HE21', 'HE22'),
+    'HG': ('HG1', 'HG2', 'HG3',),
+    'HG1': ('HG11', 'HG12', 'HG13'),
+    'HG2': ('HG21', 'HG22', 'HG23',),
+    'HH': ('HH1', 'HH2', 'HH11', 'HH12', 'HH21', 'HH22'),
+    'HH1': ('HH11', 'HH12'),
+    'HH2': ('HH21', 'HH22'),
+    'HZ': ('HZ1', 'HZ2', 'HZ3'),
+    'CE': ('CE1', 'CE2'),
+    'CD': ('CD1', 'CD2'),
+    'HN': ('H'),
+    'OXT': ('O'),
 }
 # default assignments
 d = { 
@@ -136,14 +158,15 @@ with open(sys.argv[1]) as f:
     for line in f:
         search = re.search(atom_rx, line)
         if search:
-            atype, aclass, name, descr, symbol, mass, valence = search.groups()
-            residue = ' '.join(descr.split()[:-1]).lower()
-            if residue in AA:
-                restype = AA[residue].upper()
+            tinker_atom_type_id, aclass, amber_type, descr, symbol, mass, valence = search.groups()
+            residue_str = ' '.join(descr.split()[:-1]).lower()
+            amber_pdbname = descr.split()[-1]
+            if residue_str in AA:
+                restype = AA[residue_str].upper()
                 if restype:
-                    d[restype + '_' + name] = atype
-                    for alias in ALIASES.get(name, []):
-                        d[restype + '_' + alias] = atype
+                    d[restype + '_' + amber_pdbname] = tinker_atom_type_id, amber_type
+                    for alias in ALIASES.get(amber_pdbname, ''):
+                        d[restype + '_' + alias] = tinker_atom_type_id, amber_type
 
 
 try:
@@ -151,4 +174,4 @@ try:
 except IndexError:
     output = 'atom.types'
 with open(output, 'w') as f:
-    f.write('\n'.join(k + ' ' + v for (k,v) in sorted(d.items())))
+    f.write('\n'.join('{} {} # amber type: {}'.format(k, v[0], v[1]) for (k,v) in sorted(d.items())))

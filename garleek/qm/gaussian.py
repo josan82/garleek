@@ -73,7 +73,9 @@ class GaussianPatcher(object):
 
         While that extra PDB* info is not reported in the *.EIn, we do use
         that for atom typing as well: if available, it will be used INSTEAD
-        of the original atom type with this syntax: ``<ResName>_<PDBName>``
+        of the original atom type with this syntax: ``<ResName>_<PDBName>``.
+
+        Numbers in PDBName will be IGNORED.
         """
 
         fields = line.split()
@@ -83,7 +85,7 @@ class GaussianPatcher(object):
         if pdbinfo:
             pdb_dict = dict(map(str.upper, f.split('='))
                             for f in pdbinfo.split(','))
-            atom_fields[1] = pdb_dict['RESNAME'] + '_' + atom_fields[1]
+            atom_fields[1] = pdb_dict['RESNAME'] + '_' + pdb_dict['PDBNAME']
         # Atom types are always uppercased!
         atom_type = self.atom_types.get(atom_fields[1].upper())
         if atom_type is None:
@@ -97,6 +99,8 @@ class GaussianPatcher(object):
         if len(fields) > 6:
             link_atom = fields[6]
             link_atom_fields = link_atom.split('-')
+            if pdbinfo:
+                link_atom_fields[1] = pdb_dict['RESNAME'] + '_' + link_atom_fields[1]
             link_atom_fields[1] = self.atom_types[link_atom_fields[1]]
             patched_link_atom = '-'.join(link_atom_fields)
             line = line.replace(link_atom, patched_link_atom, 1)
